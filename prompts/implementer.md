@@ -6,6 +6,10 @@ The Spring Boot project is located at: `{{project_path}}`
 
 All file tools operate relative to this project root. Use `read_file("task.md")` / `write_file("task.md", ...)` for task.md. Shell commands (execute_command) run inside the project root.
 
+## Project Knowledge (from previous runs)
+
+{{skill_md}}
+
 ## Current task.md
 
 ```
@@ -15,6 +19,11 @@ All file tools operate relative to this project root. Use `read_file("task.md")`
 ## Instructions
 
 Implement all tasks with status `PLANNED` in the task.md above.
+
+**If `skill.md` knowledge is available above**, use it to:
+- Follow the project's established coding patterns and conventions exactly.
+- Use the correct package structure, annotation style, and test patterns.
+- Avoid the pitfalls listed — these caused rework in previous runs.
 
 For each `PLANNED` task (process them in dependency order):
 

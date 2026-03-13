@@ -99,9 +99,11 @@ class AgentRunner:
     the final text response.
     """
 
-    def __init__(self, project_root: str, task_md_path: str, model: str, max_tokens: int = 8192):
+    def __init__(self, project_root: str, task_md_path: str, model: str,
+                 max_tokens: int = 8192, skill_md_path: str = ""):
         self.project_root = project_root
-        self.task_md_path = task_md_path  # absolute path to shared/task.md
+        self.task_md_path = task_md_path    # absolute path to shared/task.md
+        self.skill_md_path = skill_md_path  # absolute path to skills/<project>.md
         self.model = model
         self.max_tokens = max_tokens
         self.client = _BedrockBearerClient(
@@ -204,14 +206,15 @@ class AgentRunner:
 
     def _execute_tool(self, tool_name: str, tool_input: dict) -> str:
         """
-        Route tool calls. task.md reads/writes are redirected to the
-        framework's shared/task.md. Everything else targets the external project.
+        Route tool calls. task.md and skill.md reads/writes are redirected
+        to framework-managed paths. Everything else targets the external project.
         """
         from tools import read_file, write_file
 
-        # Intercept task.md — lives in framework dir, not the external project
         path = tool_input.get("path", "")
-        if path == "task.md" or path == "./task.md":
+
+        # Intercept task.md — lives in framework's shared/ dir
+        if path in ("task.md", "./task.md"):
             if tool_name == "read_file":
                 try:
                     return Path(self.task_md_path).read_text(encoding="utf-8")
@@ -223,6 +226,25 @@ class AgentRunner:
                         tool_input["content"], encoding="utf-8"
                     )
                     return f"OK: Written {len(tool_input['content'])} bytes to task.md"
+                except Exception as e:
+                    return f"ERROR: {e}"
+
+        # Intercept skill.md — lives in framework's skills/ dir
+        if path in ("skill.md", "./skill.md") and self.skill_md_path:
+            if tool_name == "read_file":
+                try:
+                    p = Path(self.skill_md_path)
+                    if not p.exists():
+                        return "(skill.md does not exist yet)"
+                    return p.read_text(encoding="utf-8")
+                except Exception as e:
+                    return f"ERROR: {e}"
+            elif tool_name == "write_file":
+                try:
+                    p = Path(self.skill_md_path)
+                    p.parent.mkdir(parents=True, exist_ok=True)
+                    p.write_text(tool_input["content"], encoding="utf-8")
+                    return f"OK: Written {len(tool_input['content'])} bytes to skill.md ({p})"
                 except Exception as e:
                     return f"ERROR: {e}"
 

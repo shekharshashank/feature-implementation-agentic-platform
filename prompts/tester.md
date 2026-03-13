@@ -6,6 +6,10 @@ The Spring Boot project is located at: `{{project_path}}`
 
 Shell commands (execute_command) run inside the project root. Use `read_file("task.md")` / `write_file("task.md", ...)` for task.md.
 
+## Project Knowledge (from previous runs)
+
+{{skill_md}}
+
 ## Current task.md
 
 ```

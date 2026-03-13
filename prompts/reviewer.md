@@ -6,6 +6,10 @@ The Spring Boot project is located at: `{{project_path}}`
 
 All file tools operate relative to this project root. Use `read_file("task.md")` / `write_file("task.md", ...)` for task.md.
 
+## Project Knowledge (from previous runs)
+
+{{skill_md}}
+
 ## Current task.md
 
 ```
@@ -15,6 +19,10 @@ All file tools operate relative to this project root. Use `read_file("task.md")`
 ## Instructions
 
 Review all tasks with status `IMPLEMENTED` in the task.md above.
+
+**If `skill.md` knowledge is available above**, use it when reviewing:
+- Verify the code follows the project's established patterns (not just generic best practices).
+- Check that known pitfalls from previous runs have been avoided.
 
 For each `IMPLEMENTED` task:
 

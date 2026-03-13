@@ -8,6 +8,10 @@ The Spring Boot project is located at: `{{project_path}}`
 
 All file tools operate relative to this project root. Use `read_file("task.md")` / `write_file("task.md", ...)` for task.md.
 
+## Project Knowledge (from previous runs)
+
+{{skill_md}}
+
 ## Current task.md
 
 ```

@@ -15,14 +15,19 @@ The `task.md` file is a special case — just use `write_file("task.md", ...)` t
 
 {{jira_description}}
 
+## Project Knowledge (from previous runs)
+
+{{skill_md}}
+
 ## Instructions
 
 1. Use `list_files(".")` to explore the project root.
 2. Use `list_files("src/main/java")` to discover the existing package structure.
 3. Read `pom.xml` to understand dependencies and the base package name.
-4. Explore existing source code to understand the project's conventions and patterns.
-5. Break the JIRA ticket into granular implementation tasks.
-6. **Create `task.md`** using `write_file("task.md", ...)` following the exact format below.
+4. If `skill.md` exists above, **use it to skip redundant exploration** — you already know the project's package structure, patterns, and pitfalls. Focus on what's new.
+5. Explore existing source code to understand the project's conventions and patterns.
+6. Break the JIRA ticket into granular implementation tasks.
+7. **Create `task.md`** using `write_file("task.md", ...)` following the exact format below.
 
 ## Required task.md Format
 

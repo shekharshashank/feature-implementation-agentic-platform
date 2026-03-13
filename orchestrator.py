@@ -57,6 +57,10 @@ class Orchestrator:
         # task.md lives inside the framework's shared/ dir, NOT in the external project
         self.task_md_path = self.base_dir / "shared" / "task.md"
 
+        # skill.md lives under the framework's skills/ dir, keyed by project name
+        project_name = Path(project_root).resolve().name
+        self.skill_md_path = self.base_dir / "skills" / f"{project_name}.md"
+
         # Load agent configs from .md files (once)
         agents_dir = self.base_dir / "agents"
         self.agent_configs = {
@@ -69,6 +73,7 @@ class Orchestrator:
         self.runner = AgentRunner(
             project_root=project_root,
             task_md_path=str(self.task_md_path),
+            skill_md_path=str(self.skill_md_path),
             model=model,
             max_tokens=max_tokens,
         )
@@ -81,19 +86,26 @@ class Orchestrator:
         """
         self._print_banner()
 
+        skill_md = self._read_skill_md()
+        if skill_md:
+            print(f"  [orchestrator] Found skill.md in project — agents will use cached knowledge")
+
         if self.resume and self.task_md_path.exists():
-            return self._run_with_resume()
+            result = self._run_with_resume()
+        else:
+            # ── Fresh run ────────────────────────────────────────────
+            self._cleanup_stale_task_md()
+            self._clarify_requirements()
 
-        # ── Fresh run ────────────────────────────────────────────────
-        self._cleanup_stale_task_md()
-        self._clarify_requirements()
+            result = self._run_iterations(1, self.max_iterations)
+            if not result:
+                result = self._ask_user_for_help()
 
-        result = self._run_iterations(1, self.max_iterations)
-        if result:
-            return result
+        # On success, capture project learnings into skill.md
+        if result["success"]:
+            self._generate_skill_md(result["iterations"])
 
-        # Max iterations exhausted
-        return self._ask_user_for_help()
+        return result
 
     # ── Resume logic ──────────────────────────────────────────────────
 
@@ -326,6 +338,7 @@ class Orchestrator:
         """Load and render the appropriate prompt template."""
         prompts_dir = self.base_dir / "prompts"
         task_md = self._read_task_md()
+        skill_md = self._read_skill_md()
         variables = {
             "iteration": str(iteration),
             "task_md": task_md if task_md else "(task.md does not exist yet — you must create it)",
@@ -333,6 +346,7 @@ class Orchestrator:
             "jira_ticket": self.jira_ticket_key,
             "max_iterations": str(self.max_iterations),
             "project_path": self.project_root,
+            "skill_md": skill_md if skill_md else "(no skill.md yet — first run on this project)",
         }
 
         if agent_name == "planner":
@@ -351,6 +365,37 @@ class Orchestrator:
             self.task_md_path.unlink()
             print(f"  [orchestrator] Removed stale {self.task_md_path}")
         print(f"  [orchestrator] Planner agent will create task.md on first iteration")
+
+    # ── skill.md — project knowledge cache ────────────────────────────
+
+    def _read_skill_md(self) -> str:
+        """Read skill.md from skills/<project-name>.md, if it exists."""
+        if self.skill_md_path.exists():
+            return self.skill_md_path.read_text(encoding="utf-8")
+        return ""
+
+    def _generate_skill_md(self, final_iteration: int) -> None:
+        """After a successful run, generate/update skill.md with project learnings."""
+        print(f"\n{'─'*60}")
+        print(f"  GENERATING skill.md — capturing project learnings")
+        print(f"  Target: {self.skill_md_path}")
+        print(f"{'─'*60}")
+
+        task_md = self._read_task_md()
+        skill_md = self._read_skill_md()
+
+        variables = {
+            "project_path": self.project_root,
+            "task_md": task_md,
+            "existing_skill_md": skill_md if skill_md else "(no existing skill.md — creating from scratch)",
+            "iteration": str(final_iteration),
+        }
+
+        template = str(self.base_dir / "prompts" / "skill-writer.md")
+        prompt = load_prompt_template(template, variables)
+
+        self.runner.run(self.agent_configs["planner"], prompt)
+        print(f"  skill.md updated at {self.skill_md_path}")
 
     def _read_task_md(self) -> str:
         if self.task_md_path.exists():
@@ -449,6 +494,7 @@ class Orchestrator:
                 "message": "Still incomplete after user guidance."}
 
     def _print_banner(self) -> None:
+        skill_exists = self.skill_md_path.exists()
         print(f"\n{'='*60}")
         print("  MULTI-AGENT FEATURE IMPLEMENTATION PLATFORM")
         print(f"{'='*60}")
@@ -456,6 +502,7 @@ class Orchestrator:
         print(f"  Project     : {self.project_root}")
         print(f"  Max iters   : {self.max_iterations}")
         print(f"  Ticket      : {self.jira_ticket_key}")
+        print(f"  Skill cache : {'YES — ' + str(self.skill_md_path) if skill_exists else 'NO — first run on this project'}")
         desc = self.jira_description
         if len(desc) > 80:
             desc = desc[:80] + "…"
